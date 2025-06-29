@@ -267,7 +267,16 @@ kubectl delete crd storagenodes.core.libopenstorage.org
 
 ---
 
+## Developer
+
+**Author**: tron4x  
+**Project**: Portworx Umbrella Chart for Air-Gapped Environments  
+**Version**: 1.1  
+
+---
+
 ## Additional Information
 
 * [Portworx Documentation](https://docs.portworx.com/)
 * [Kubernetes Storage Concepts](https://kubernetes.io/docs/concepts/storage/)
+* [Original Portworx Helm Chart](https://github.com/portworx/helm/tree/master/charts/portworx)
