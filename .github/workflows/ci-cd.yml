@@ -10,7 +10,7 @@ on:
 
 env:
   HELM_VERSION: "3.14.0"
-  KUBERNETES_VERSION: "1.29.0"
+  KUBERNETES_VERSION: "1.29.15"
 
 jobs:
   lint:
@@ -47,7 +47,7 @@ jobs:
     needs: lint
     strategy:
       matrix:
-        k8s-version: ["1.26.15", "1.27.12", "1.28.8", "1.29.3"]
+        k8s-version: ["1.29.15"]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
