@@ -1,0 +1,171 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  release:
+    types: [ published ]
+
+env:
+  HELM_VERSION: "3.14.0"
+  KUBERNETES_VERSION: "1.29.0"
+
+jobs:
+  lint:
+    name: Lint Charts
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: ${{ env.HELM_VERSION }}
+
+      - name: Set up chart-testing
+        uses: helm/chart-testing-action@v2.6.1
+
+      - name: Run chart-testing (lint)
+        run: ct lint --target-branch ${{ github.event.repository.default_branch }}
+
+      - name: Helm Lint
+        run: |
+          helm lint .
+          helm lint charts/portworx-operator
+          helm lint charts/portworx-software
+          helm lint charts/portworx-storageclasses
+          helm lint charts/portworx-monitoring
+
+  test:
+    name: Test Charts
+    runs-on: ubuntu-latest
+    needs: lint
+    strategy:
+      matrix:
+        k8s-version: ["1.26.15", "1.27.12", "1.28.8", "1.29.3"]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: ${{ env.HELM_VERSION }}
+
+      - name: Create kind cluster
+        uses: helm/kind-action@v1.10.0
+        with:
+          version: v${{ matrix.k8s-version }}
+
+      - name: Set up chart-testing
+        uses: helm/chart-testing-action@v2.6.1
+
+      - name: Install CRDs
+        run: |
+          kubectl apply -f crds/
+
+      - name: Template Charts
+        run: |
+          helm template test-release . \
+            --set global.imageRegistry="test-registry.com" \
+            --set global.clusterName="test-cluster" \
+            --set monitoring.enabled=false
+
+      - name: Dry-run Install
+        run: |
+          helm install portworx-test . --dry-run \
+            --set global.imageRegistry="test-registry.com" \
+            --set global.clusterName="test-cluster" \
+            --set monitoring.enabled=false
+
+  package:
+    name: Package Charts
+    runs-on: ubuntu-latest
+    needs: [lint, test]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure Git
+        run: |
+          git config user.name "$GITHUB_ACTOR"
+          git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: ${{ env.HELM_VERSION }}
+
+      - name: Update dependencies
+        run: helm dependency update
+
+      - name: Package charts
+        run: |
+          mkdir -p packages
+          helm package . -d packages/
+          helm package charts/portworx-operator -d packages/
+          helm package charts/portworx-software -d packages/
+          helm package charts/portworx-storageclasses -d packages/
+          helm package charts/portworx-monitoring -d packages/
+
+      - name: Upload packages as artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: helm-packages
+          path: packages/
+
+  release:
+    name: Release Charts
+    runs-on: ubuntu-latest
+    needs: [lint, test]
+    if: github.event_name == 'release'
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure Git
+        run: |
+          git config user.name "$GITHUB_ACTOR"
+          git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: ${{ env.HELM_VERSION }}
+
+      - name: Update dependencies
+        run: helm dependency update
+
+      - name: Run chart-releaser
+        uses: helm/chart-releaser-action@v1.6.0
+        with:
+          charts_dir: .
+        env:
+          CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push charts to GHCR
+        run: |
+          helm package .
+          helm push *.tgz oci://ghcr.io/${{ github.repository_owner }}/helm-charts
