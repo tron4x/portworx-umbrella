@@ -1,7 +1,7 @@
 # Portworx Umbrella Chart
 
-[![CI/CD Pipeline](https://github.com/tron4x/portworx-umbrella-new/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/tron4x/portworx-umbrella-new/actions/workflows/ci-cd.yml)
-[![Chart Testing](https://github.com/tron4x/portworx-umbrella-new/actions/workflows/test.yml/badge.svg)](https://github.com/tron4x/portworx-umbrella-new/actions/workflows/test.yml)
+[![CI/CD Pipeline](https://github.com/tron4x/portworx-umbrella/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/tron4x/portworx-umbrella/actions/workflows/ci-cd.yml)
+[![Chart Testing](https://github.com/tron4x/portworx-umbrella/actions/workflows/test.yml/badge.svg)](https://github.com/tron4x/portworx-umbrella/actions/workflows/test.yml)
 [![Helm](https://img.shields.io/badge/Helm-3.14+-blue?logo=helm)](https://helm.sh/)
 [![Kubernetes](https://img.shields.io/badge/Kubernetes-1.29+-blue?logo=kubernetes)](https://kubernetes.io/)
 
