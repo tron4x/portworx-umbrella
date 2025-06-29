@@ -1,0 +1,45 @@
+# Default values for portworx-monitoring
+# This is a YAML-formatted file.
+
+# Global values inherited from parent chart
+global:
+  namespace: ""
+
+# Monitoring configuration (since Grafana and Prometheus are already running)
+monitoring:
+  # Enable/disable monitoring components
+  enabled: true
+  
+  # Grafana dashboards configuration
+  grafana:
+    # Enable Grafana dashboard creation
+    enabled: true
+    # Dashboard installation method
+    dashboards:
+      # Create ConfigMaps for dashboards
+      configMaps: true
+      # Dashboard labels for Grafana auto-discovery
+      labels:
+        grafana_dashboard: "1"
+      
+  # Prometheus configuration
+  prometheus:
+    # Enable Prometheus rules
+    enabled: true
+    # ServiceMonitor for Portworx metrics
+    serviceMonitor:
+      enabled: true
+      interval: "30s"
+      labels: {}
+      
+  # Alert Manager rules
+  alertManager:
+    enabled: true
+    
+# Dashboard configuration
+dashboards:
+  # Include all standard Portworx dashboards
+  cluster: true
+  node: true
+  volume: true
+  etcd: true

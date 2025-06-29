@@ -1,0 +1,7 @@
+apiVersion: v2
+name: portworx-software
+version: 1.0.0
+description: Portworx Storage Cluster Software
+kubeVersion: ">=1.26.0-0"
+appVersion: "3.3.0"
+type: application

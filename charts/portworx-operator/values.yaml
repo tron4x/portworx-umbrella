@@ -1,0 +1,46 @@
+# Default values for portworx-operator
+# This is a YAML-formatted file.
+
+# Global values inherited from parent chart
+global:
+  imageRegistry: ""
+  registrySecret: ""
+  namespace: ""
+
+# Operator deployment configuration
+deployOperator: true
+
+# Operator image configuration
+pxOperatorImageVersion: ""
+
+# Image pull policy
+imagePullPolicy: ""
+
+# Service account configuration
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+
+# Pod affinity settings
+affinity: {}
+
+# Node selector
+nodeSelector: {}
+
+# Tolerations
+tolerations: []
+
+# Resources
+resources: {}
+  # limits:
+  #   cpu: 100m
+  #   memory: 128Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi
+
+# Registry secret
+registrySecret: ""

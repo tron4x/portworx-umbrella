@@ -1,0 +1,28 @@
+apiVersion: v2
+name: portworx-umbrella
+version: 1.0.0
+description: An umbrella chart for Portworx deployment with modular architecture for air-gapped environments
+kubeVersion: ">=1.26.0-0"
+appVersion: "3.3.0"
+type: application
+
+dependencies:
+  - name: portworx-operator
+    version: "1.0.0"
+    condition: operator.enabled
+    repository: "file://./charts/portworx-operator"
+    
+  - name: portworx-software
+    version: "1.0.0"  
+    condition: software.enabled
+    repository: "file://./charts/portworx-software"
+    
+  - name: portworx-storageclasses
+    version: "1.0.0"
+    condition: storageclasses.enabled
+    repository: "file://./charts/portworx-storageclasses"
+    
+  - name: portworx-monitoring
+    version: "1.0.0"
+    condition: monitoring.enabled
+    repository: "file://./charts/portworx-monitoring"

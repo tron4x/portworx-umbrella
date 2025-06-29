@@ -1,0 +1,27 @@
+{
+  "files.associations": {
+    "**/templates/**/*.yaml": "helm",
+    "**/templates/**/*.yml": "helm",
+    "**/charts/**/templates/**/*.yaml": "helm",
+    "**/charts/**/templates/**/*.yml": "helm"
+  },
+  "yaml.validate": false,
+  "yaml.completion": false,
+  "yaml.hover": false,
+  "yaml.format.enable": false,
+  "yaml.schemaStore.enable": false,
+  "[helm]": {
+    "editor.quickSuggestions": {
+      "other": true,
+      "comments": false,
+      "strings": true
+    },
+    "yaml.validate": false,
+    "yaml.completion": false
+  },
+  "redhat.telemetry.enabled": false,
+  "workbench.editorAssociations": {
+    "**/templates/**/*.yaml": "default",
+    "**/charts/**/templates/**/*.yaml": "default"
+  }
+}

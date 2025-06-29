@@ -1,0 +1,7 @@
+apiVersion: v2
+name: portworx-monitoring
+version: 1.0.0
+description: Portworx Monitoring Components and Dashboards
+kubeVersion: ">=1.26.0-0"
+appVersion: "3.3.0"
+type: application

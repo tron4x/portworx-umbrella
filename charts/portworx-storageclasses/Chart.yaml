@@ -1,0 +1,7 @@
+apiVersion: v2
+name: portworx-storageclasses
+version: 1.0.0
+description: Default Portworx StorageClasses
+kubeVersion: ">=1.26.0-0"
+appVersion: "3.3.0"
+type: application

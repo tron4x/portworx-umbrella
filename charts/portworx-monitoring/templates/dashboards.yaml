@@ -1,0 +1,65 @@
+{{- if and .Values.monitoring.enabled .Values.monitoring.grafana.enabled }}
+{{- if .Values.dashboards.cluster }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "portworx-monitoring.fullname" . }}-cluster-dashboard
+  labels:
+    {{- include "portworx-monitoring.labels" . | nindent 4 }}
+    {{- with .Values.monitoring.grafana.dashboards.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+data:
+  portworx-cluster-dashboard.json: |
+{{ .Files.Get "dashboards/portworx-cluster-dashboard.json" | indent 4 }}
+{{- end }}
+
+{{- if .Values.dashboards.node }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "portworx-monitoring.fullname" . }}-node-dashboard
+  labels:
+    {{- include "portworx-monitoring.labels" . | nindent 4 }}
+    {{- with .Values.monitoring.grafana.dashboards.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+data:
+  portworx-node-dashboard.json: |
+{{ .Files.Get "dashboards/portworx-node-dashboard.json" | indent 4 }}
+{{- end }}
+
+{{- if .Values.dashboards.volume }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "portworx-monitoring.fullname" . }}-volume-dashboard
+  labels:
+    {{- include "portworx-monitoring.labels" . | nindent 4 }}
+    {{- with .Values.monitoring.grafana.dashboards.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+data:
+  portworx-volume-dashboard.json: |
+{{ .Files.Get "dashboards/portworx-volume-dashboard.json" | indent 4 }}
+{{- end }}
+
+{{- if .Values.dashboards.etcd }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "portworx-monitoring.fullname" . }}-etcd-dashboard
+  labels:
+    {{- include "portworx-monitoring.labels" . | nindent 4 }}
+    {{- with .Values.monitoring.grafana.dashboards.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+data:
+  portworx-etcd-dashboard.json: |
+{{ .Files.Get "dashboards/portworx-etcd-dashboard.json" | indent 4 }}
+{{- end }}
+{{- end }}

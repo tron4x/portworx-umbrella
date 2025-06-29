@@ -1,0 +1,7 @@
+apiVersion: v2
+name: portworx-operator
+version: 1.0.0
+description: Portworx Operator for Kubernetes
+kubeVersion: ">=1.26.0-0"
+appVersion: "25.2.1"
+type: application

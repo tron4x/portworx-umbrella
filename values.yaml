@@ -1,0 +1,25 @@
+# Global settings for air-gapped environments
+global:
+  # Private registry for air-gapped environments (Artifactory)
+  imageRegistry: ""
+  # Registry secret for private registries
+  registrySecret: ""
+  # Portworx cluster name
+  clusterName: ""
+  # Namespace for Portworx deployment
+  namespace: ""
+
+# Module enablement - control which components to deploy
+operator:
+  enabled: true
+  
+software:
+  enabled: true
+  
+storageclasses:
+  enabled: true
+  
+monitoring:
+  enabled: false
+
+

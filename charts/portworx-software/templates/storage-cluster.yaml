@@ -1,0 +1,367 @@
+# yaml-language-server: $schema=
+# This is a Helm template file - Helm template syntax is expected here
+{{- if .Values.deployCluster }}
+{{- $customRegistryURL := include "portworx-software.imageRegistry" . }}
+{{- $registrySecret := .Values.global.registrySecret | default "none" }}
+{{- $clusterName := include "portworx-software.clusterName" . }}
+{{- $namespace := include "portworx-software.namespace" . }}
+
+kind: StorageCluster
+apiVersion: core.libopenstorage.org/v1
+metadata:
+  name: "{{ $clusterName }}"
+  namespace: {{ $namespace }}
+  annotations:
+    {{- if .Values.openshiftInstall }}
+    portworx.io/is-openshift: "true"
+    {{- end }}
+    {{- if .Values.pksInstall }}
+    portworx.io/is-pks: "true"
+    {{- end }}
+    {{- if .Values.EKSInstall }}
+    portworx.io/is-eks: "true"
+    {{- end }}
+    {{- if .Values.GKEInstall }}
+    portworx.io/is-gke: "true"
+    {{- end }}
+    {{- if .Values.AKSInstall }}
+    portworx.io/is-aks: "true"
+    {{- end }}
+    {{- if .Values.OKEInstall }}
+    portworx.io/is-oke: "true"
+    {{- end }}
+    {{- if .Values.nonDisruptivek8sUpgrade }}
+    portworx.io/disable-non-disruptive-upgrade: "false"
+    {{- end }}
+    {{- if .Values.skipHealthChecks }}
+    portworx.io/health-check: "skip"
+    {{- end }}
+  labels:
+    {{- include "portworx-software.labels" . | nindent 4 }}
+spec:
+  image: portworx/oci-monitor:{{ .Values.imageVersion | default .Chart.AppVersion }}
+  imagePullPolicy: {{ .Values.imagePullPolicy | default "Always" }}
+  {{- if $customRegistryURL }}
+  customImageRegistry: {{ $customRegistryURL }}
+  {{- end }}
+  {{- if ne $registrySecret "none" }}
+  imagePullSecret: {{ $registrySecret }}
+  {{- end }}
+
+  {{- if .Values.updateStrategy.type }}
+  updateStrategy:
+    type: {{ .Values.updateStrategy.type }}
+  {{- end }}
+
+  {{- if .Values.updateStrategy.autoUpdateComponents }}
+  autoUpdateComponents: {{ .Values.updateStrategy.autoUpdateComponents }}
+  {{- end }}
+
+  kvdb:
+  {{- if and .Values.internalKVDB (empty .Values.etcdEndPoint) }}
+    internal: true
+  {{- else }}
+    internal: false
+    {{- if .Values.etcdEndPoint }}
+    endpoints:
+    {{- $endpoints := .Values.etcdEndPoint | split ";" }}
+    {{- range $endpoints }}
+    - {{ . }}
+    {{- end }}
+    {{- end }}
+  {{- end }}
+
+  {{- if and (ne .Values.drives "none") (not (hasPrefix "/" .Values.drives)) }}
+  cloudStorage:
+    {{- if .Values.provider }}
+    provider: {{ .Values.provider }}
+    {{- end }}
+    deviceSpecs:
+    {{- $driveSpecs := .Values.drives | split ";" }}
+    {{- range $driveSpecs }}
+    - {{ . }}
+    {{- end }}
+    {{- if and (ne .Values.kvdbDevice "none") (not (hasPrefix "/" .Values.kvdbDevice)) }}
+    kvdbDeviceSpec: {{ .Values.kvdbDevice }}
+    {{- end }}
+    {{- if ne .Values.systemMetadataDevice "none" }}
+    systemMetadataDeviceSpec: {{ .Values.systemMetadataDevice }}
+    {{- end }}
+    {{- if and (ne .Values.journalDevice "none") (not (hasPrefix "/" .Values.journalDevice)) }}
+    journalDeviceSpec: {{ .Values.journalDevice }}
+    {{- end }}
+    {{- if gt (.Values.maxStorageNodesPerZone | int) 0 }}
+    maxStorageNodesPerZone: {{ .Values.maxStorageNodesPerZone }}
+    {{- end }}
+    {{- if ne (.Values.maxStorageNodes | int) 0 }}
+    maxStorageNodes: {{ .Values.maxStorageNodes }}
+    {{- end }}
+  {{- else }}
+  storage:
+    {{- if hasPrefix "/" .Values.drives }}
+    devices:
+    {{- $driveNames := .Values.drives | split ";" }}
+    {{- range $driveNames }}
+    - {{ . }}
+    {{- end }}
+    {{- end }}
+    {{- if .Values.usefileSystemDrive }}
+    useAll: true
+    forceUseDisks: true
+    {{- end }}
+    {{- if .Values.usedrivesAndPartitions }}
+    useAllWithPartitions: true
+    {{- end }}
+    {{- if and (ne .Values.kvdbDevice "none") (hasPrefix "/" .Values.kvdbDevice) }}
+    kvdbDevice: {{ .Values.kvdbDevice }}
+    {{- end }}
+    {{- if and (ne .Values.cacheDevices "none") }}
+    cacheDevices: {{ .Values.cacheDevices }}
+    {{- end }}
+    {{- if ne .Values.systemMetadataDevice "none" }}
+    systemMetadataDevice: {{ .Values.systemMetadataDevice }}
+    {{- end }}
+    {{- if and (ne .Values.journalDevice "none") (or (hasPrefix "/" .Values.journalDevice) (eq "auto" .Values.journalDevice)) }}
+    journalDevice: {{ .Values.journalDevice }}
+    {{- end }}
+  {{- end }}
+
+  {{- if or (ne .Values.dataInterface "none") (ne .Values.managementInterface "none") }}
+  network:
+    {{- if ne .Values.dataInterface "none" }}
+    dataInterface: {{ .Values.dataInterface }}
+    {{- end }}
+    {{- if ne .Values.managementInterface "none" }}
+    mgmtInterface: {{ .Values.managementInterface }}
+    {{- end }}
+  {{- end }}
+
+  {{- if ne .Values.secretType "none" }}
+  secretsProvider: {{ .Values.secretType }}
+  {{- end }}
+
+  {{- if or (ne .Values.envVars "none") .Values.envs .Values.AKSInstall .Values.OKEInstall (ne .Values.licenseSecret "") }}
+  env:
+  {{- with .Values.envs }}
+    {{- toYaml . | nindent 2 }}
+  {{- end }}
+  {{- if not (eq .Values.envVars "none") }}
+    {{- $vars := .Values.envVars | split ";" }}
+    {{- range $key, $val := $vars }}
+    {{- $envVariable := $val | split "=" }}
+  - name: {{ $envVariable._0 | trim | quote }}
+    value: {{ $envVariable._1 | trim | quote }}
+    {{- end }}
+  {{- end }}
+  {{- if ne .Values.licenseSecret "" }}
+  - name: SAAS_ACCOUNT_KEY_STRING
+    valueFrom:
+      secretKeyRef:
+        name: "{{ .Values.licenseSecret }}"
+        key: accountKey
+  {{- end }}
+  {{- if .Values.AKSInstall }}
+  - name: AZURE_CLIENT_SECRET
+    valueFrom:
+      secretKeyRef:
+        name: px-azure
+        key: AZURE_CLIENT_SECRET
+  - name: AZURE_CLIENT_ID
+    valueFrom:
+      secretKeyRef:
+        name: px-azure
+        key: AZURE_CLIENT_ID
+  - name: AZURE_TENANT_ID
+    valueFrom:
+      secretKeyRef:
+        name: px-azure
+        key: AZURE_TENANT_ID
+  {{- end }}
+  {{- if .Values.OKEInstall }}
+  - name: PX_ORACLE_user_ocid
+    valueFrom:
+      secretKeyRef:
+        name: px-oracle
+        key: user_ocid
+  - name: PX_ORACLE_fingerprint
+    valueFrom:
+      secretKeyRef:
+        name: px-oracle
+        key: fingerprint
+  - name: "PX_ORACLE_private_key_path"
+    value: "/etc/pwx/oci_key/oci_api_key.pem"
+  {{- end }}
+  {{- end }}
+  
+  {{- if .Values.stork.enabled }}
+  stork:
+    enabled: true
+    {{- if .Values.stork.storkVersion }}
+    image: openstorage/stork:{{ .Values.stork.storkVersion }}
+    {{- end }}
+    {{- with .Values.stork.env }}
+    env:
+      {{- toYaml . | nindent 4 }}
+    {{- end }}
+    {{- with .Values.stork.volumes }}
+    volumes:
+      {{- toYaml . | nindent 4 }}
+    {{- end }}
+    {{- if .Values.stork.args }}
+    args:
+    {{- $args := .Values.stork.args | split ";" }}
+    {{- range $key, $val := $args }}
+    {{- $arg := $val | split "=" }}
+      {{ $arg._0 | trim }}: {{ $arg._1 | trim | quote }}
+    {{- end }}
+    {{- end }}
+  {{- else }}
+  stork:
+    enabled: false
+  {{- end }}
+
+  {{- if .Values.autopilot.enabled }}
+  autopilot:
+    enabled: true
+    {{- if .Values.autopilot.image }}
+    image: {{ .Values.autopilot.image }}
+    {{- end }}
+    {{- if .Values.autopilot.lockImage }}
+    lockImage: true
+    {{- end }}
+    {{- if .Values.autopilot.args }}
+    args:
+    {{- $args := .Values.autopilot.args | split ";" }}
+    {{- range $key, $val := $args }}
+    {{- $arg := $val | split "=" }}
+      {{ $arg._0 | trim }}: {{ $arg._1 | trim | quote }}
+    {{- end }}
+    {{- end }}
+    {{- with .Values.autopilot.env }}
+    env:
+      {{- toYaml . | nindent 4 }}
+    {{- end }}
+    {{- with .Values.autopilot.volumes }}
+    volumes:
+      {{- toYaml . | nindent 4 }}
+    {{- end }}
+    {{- with .Values.autopilot.providers }}
+    providers:
+    {{- range . }}
+    - name: "{{ .name }}"
+      type: "{{ .type }}"
+      params:
+        {{- $params := splitList ";" .params }}
+        {{- range $params }}
+        {{- $pair := splitList "=" . }}
+        {{- if eq (len $pair) 2 }}
+        {{- $key := index $pair 0 }}
+        {{- $value := index $pair 1 }}
+        {{ $key }}: "{{ $value }}"
+        {{- end }}
+        {{- end }}
+    {{- end }}
+    {{- end }}
+  {{- else }}
+  autopilot:
+    enabled: false
+  {{- end }}
+
+  {{- if .Values.csi.enabled }}
+  csi:
+    enabled: true
+    {{- if .Values.csi.topology.enabled }}
+    topology:
+      enabled: true
+    {{- end }}
+    {{- if .Values.csi.installSnapshotController }}
+    installSnapshotController: true
+    {{- end }}
+  {{- else }}
+  csi:
+    enabled: false
+  {{- end }}
+
+  {{- if .Values.runtimeOptions }}
+  runtimeOptions:
+  {{- $args := .Values.runtimeOptions | split ";" }}
+  {{- range $key, $val := $args }}
+  {{- $arg := $val | split "=" }}
+    {{ $arg._0 | trim }}: {{ $arg._1 | trim | quote }}
+  {{- end }}
+  {{- end }}
+
+  {{- if .Values.featureGates }}
+  featureGates:
+  {{- $args := .Values.featureGates | split ";" }}
+  {{- range $key, $val := $args }}
+  {{- $arg := $val | split "=" }}
+    {{ $arg._0 | trim }}: {{ $arg._1 | trim | quote }}
+  {{- end }}
+  {{- end }}
+
+  {{- if .Values.security.enabled }}
+  security: 
+    enabled: true
+    auth:
+      {{- if or (eq .Values.security.auth.guestAccess "Enabled") (eq .Values.security.auth.guestAccess "Disabled") (eq .Values.security.auth.guestAccess "Managed") }}
+      guestAccess: {{ .Values.security.auth.guestAccess }}
+      {{- end }}
+      {{- if and .Values.security.auth.selfSigned.tokenLifetime .Values.security.auth.selfSigned.issuer .Values.security.auth.selfSigned.sharedSecret }}
+      selfSigned:
+        tokenLifetime: {{ .Values.security.auth.selfSigned.tokenLifetime }}
+        issuer: {{ .Values.security.auth.selfSigned.issuer }}
+        sharedSecret: {{ .Values.security.auth.selfSigned.sharedSecret }}
+      {{- end }}
+  {{- end }}
+
+  {{- with .Values.resources }}
+  resources:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+
+  {{- if or .Values.tolerations .Values.nodeAffinity }}
+  placement:
+  {{- with .Values.tolerations }}
+    tolerations:
+      {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with .Values.nodeAffinity }}
+    nodeAffinity:
+      {{- toYaml . | nindent 5 }}
+  {{- end }}
+  {{- end }}
+
+  {{- with .Values.nodesConfiguration }}
+  nodes:
+    {{- toYaml . | nindent 2 }}
+  {{- end }}
+
+  {{- if .Values.deleteStrategy.type }}
+  deleteStrategy:
+    type: {{ .Values.deleteStrategy.type }}
+  {{- end }}
+
+  {{- if or (eq (include "portworx-software.volumesPresent" .) "true") .Values.OKEInstall }}
+  volumes:
+  {{- if .Values.OKEInstall }}
+  - name: ociapikey
+    mountPath: /etc/pwx/oci_key
+    secret:
+      secretName: ociapikey
+      items:
+      - key: oci_api_key.pem
+        path: oci_api_key.pem
+  {{- end }}
+  {{- if .Values.isTargetOSCoreOS }}
+  - name: src
+    mountPath: /lib/modules
+    hostPath:
+      path: /lib/modules
+      type: Directory
+  {{- end }}
+  {{- with .Values.volumes }}
+    {{- toYaml . | nindent 2 }}
+  {{- end }}
+  {{- end }}
+{{- end }}

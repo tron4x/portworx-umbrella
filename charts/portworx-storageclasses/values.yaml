@@ -1,0 +1,63 @@
+# Default values for portworx-storageclasses
+# This is a YAML-formatted file.
+
+# Global values inherited from parent chart
+global:
+  namespace: ""
+
+# StorageClass configuration
+disableStorageClass: false
+
+# Default StorageClasses to create
+storageClasses:
+  - name: portworx-sc
+    parameters:
+      repl: "3"
+      priority_io: "high"
+      io_profile: "db_remote"
+    allowVolumeExpansion: true
+    reclaimPolicy: Delete
+    volumeBindingMode: Immediate
+    
+  - name: portworx-shared-sc
+    parameters:
+      repl: "3"
+      sharedv4: "true"
+      priority_io: "high"
+    allowVolumeExpansion: true
+    reclaimPolicy: Delete
+    volumeBindingMode: Immediate
+    
+  - name: portworx-db-sc
+    parameters:
+      repl: "3"
+      priority_io: "high"
+      io_profile: "db"
+    allowVolumeExpansion: true
+    reclaimPolicy: Delete
+    volumeBindingMode: Immediate
+    
+  - name: portworx-db2-sc
+    parameters:
+      repl: "3"
+      priority_io: "high"
+      io_profile: "db_remote"
+      disable_io_profile_protection: "1"
+    allowVolumeExpansion: true
+    reclaimPolicy: Delete
+    volumeBindingMode: Immediate
+    
+  - name: portworx-null-sc
+    parameters:
+      repl: "1"
+      priority_io: "medium"
+    allowVolumeExpansion: true
+    reclaimPolicy: Delete
+    volumeBindingMode: Immediate
+
+# Stork snapshot StorageClass
+storkSnapshotClass:
+  enabled: true
+  name: stork-snapshot-sc
+  parameters: {}
+  reclaimPolicy: Delete
