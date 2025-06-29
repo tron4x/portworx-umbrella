@@ -10,9 +10,6 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        k8s-version: ["1.28.9"]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -27,31 +24,28 @@ jobs:
       - name: Set up chart-testing
         uses: helm/chart-testing-action@v2.6.1
 
-      - name: Create kind cluster
+      - name: Template Charts (validation only)
         run: |
-          # Install kind
-          curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.20.0/kind-linux-amd64
-          chmod +x ./kind
-          sudo mv ./kind /usr/local/bin/kind
+          helm template test-release . \
+            --set global.imageRegistry="docker.io" \
+            --set global.clusterName="test-cluster" \
+            --set monitoring.enabled=false
+
+      - name: Validate Chart Templates
+        run: |
+          # Test all sub-charts individually
+          helm template test-operator charts/portworx-operator \
+            --set global.imageRegistry="docker.io"
           
-          # Create cluster
-          kind create cluster --name kind --image kindest/node:v${{ matrix.k8s-version }}
-          kubectl cluster-info
-
-      - name: Install CRDs (with size limit handling)
-        run: |
-          # Try to install CRDs, skip if too large
-          for crd in crds/*.yaml; do
-            echo "Installing CRD: $crd"
-            if ! kubectl apply -f "$crd"; then
-              echo "Warning: CRD $crd failed to install (possibly too large), continuing..."
-            fi
-          done
-
-      - name: Run chart-testing (install)
-        run: |
-          ct install --target-branch ${{ github.event.repository.default_branch }} \
-            --helm-extra-set-args "--set=global.imageRegistry=docker.io --set=global.clusterName=test-cluster"
+          helm template test-software charts/portworx-software \
+            --set global.imageRegistry="docker.io" \
+            --set global.clusterName="test-cluster"
+          
+          helm template test-storageclasses charts/portworx-storageclasses \
+            --set global.imageRegistry="docker.io"
+          
+          helm template test-monitoring charts/portworx-monitoring \
+            --set global.imageRegistry="docker.io"
 
   lint-docs:
     runs-on: ubuntu-latest

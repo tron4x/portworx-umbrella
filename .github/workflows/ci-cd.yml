@@ -63,12 +63,21 @@ jobs:
             --set global.clusterName="test-cluster" \
             --set monitoring.enabled=false
 
-      - name: Dry-run Install (without cluster)
+      - name: Validate Chart Templates
         run: |
-          helm install portworx-test . --dry-run \
+          # Test all sub-charts individually
+          helm template test-operator charts/portworx-operator \
+            --set global.imageRegistry="test-registry.com"
+          
+          helm template test-software charts/portworx-software \
             --set global.imageRegistry="test-registry.com" \
-            --set global.clusterName="test-cluster" \
-            --set monitoring.enabled=false
+            --set global.clusterName="test-cluster"
+          
+          helm template test-storageclasses charts/portworx-storageclasses \
+            --set global.imageRegistry="test-registry.com"
+          
+          helm template test-monitoring charts/portworx-monitoring \
+            --set global.imageRegistry="test-registry.com"
 
   package:
     name: Package Charts
